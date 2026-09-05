@@ -365,9 +365,9 @@ impl FrequencyManager {
         self.config_list = config_list;
     }
 
-    /// 获取配置列表
-    pub fn get_config_list(&self) -> Vec<i64> {
-        self.config_list.clone()
+    /// 获取配置列表（返回切片引用，避免clone开销）
+    pub fn get_config_list(&self) -> &[i64] {
+        &self.config_list
     }
 
     /// 替换映射表

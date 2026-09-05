@@ -92,6 +92,10 @@ fn get_foreground_app_activity() -> Result<String> {
     // 新增：为error日志添加12小时限流器
     static ERROR_THROTTLER: Lazy<Mutex<WarningThrottler>> =
         Lazy::new(|| Mutex::new(WarningThrottler::new(43200)));
+    // 预编译正则表达式，避免每次调用重新编译
+    static FG_APP_REGEX: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"(\d+):([a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+)/").unwrap()
+    });
     let dumper = loop {
         match Dumpsys::new("activity") {
             Some(s) => break s,
@@ -117,13 +121,12 @@ fn get_foreground_app_activity() -> Result<String> {
     };
 
     // 使用正则表达式提取前台应用包名
-    let re = Regex::new(r"(\d+):([a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+)/").unwrap();
     for line in output.lines() {
         if line.contains("fg") && line.contains("TOP") && !line.contains("BTOP") {
             debug!("Trying regex on line: {line}");
 
-            // 使用正则表达式提取包名部分
-            if let Some(caps) = re.captures(line) {
+            // 使用预编译正则表达式提取包名部分
+            if let Some(caps) = FG_APP_REGEX.captures(line) {
                 let package_name = caps[2].to_string();
                 debug!("Extracted package name with regex: {package_name}");
                 return Ok(package_name);

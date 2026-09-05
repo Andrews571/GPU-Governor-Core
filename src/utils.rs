@@ -6,4 +6,3 @@ pub mod inotify;
 pub mod log_level_manager;
 pub mod log_rotation;
 pub mod logger;
-pub mod macros;

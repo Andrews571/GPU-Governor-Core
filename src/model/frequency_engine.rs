@@ -60,8 +60,11 @@ impl FrequencyAdjustmentEngine {
         // 根据负载动态调整采样间隔（如果启用了自适应采样）
         gpu.adjust_sampling_interval_by_load(load);
 
-        // 检查空闲状态
-        if load <= gpu.idle_manager.idle_threshold {
+        // 检查空闲状态并更新
+        let is_idle = load <= gpu.idle_manager.idle_threshold;
+        gpu.idle_manager_mut().set_idle(is_idle);
+
+        if is_idle {
             Self::handle_idle_state(gpu);
             return Ok(());
         }
@@ -160,11 +163,14 @@ impl FrequencyAdjustmentEngine {
         let last_adjust_time = gpu.frequency_strategy.last_adjustment_time;
         let delay = if is_increasing {
             gpu.frequency_strategy.up_debounce_time
+        } else if gpu.frequency_strategy.aggressive_down {
+            // 激进降频：跳过降频防抖延迟，立即降频
+            0
         } else {
             gpu.frequency_strategy.down_debounce_time
         };
 
-        if current_time - last_adjust_time < delay {
+        if delay > 0 && current_time - last_adjust_time < delay {
             debug!(
                 "Rate delay not met: {}ms < {}ms, skipping frequency change",
                 current_time - last_adjust_time,

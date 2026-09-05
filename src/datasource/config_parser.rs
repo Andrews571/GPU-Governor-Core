@@ -77,7 +77,7 @@ pub fn load_config(gpu: &mut GPU, target_mode: Option<&str>) -> Result<()> {
     };
 
     let strategy = gpu.frequency_strategy_mut();
-    strategy.set_margin(params.margin.try_into().unwrap());
+    strategy.set_margin(params.margin);
     strategy.set_aggressive_down(params.aggressive_down);
     strategy.set_sampling_interval(params.sampling_interval);
 

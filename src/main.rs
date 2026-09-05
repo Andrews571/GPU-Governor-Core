@@ -191,8 +191,12 @@ fn display_ddr_info(gpu: &GPU) {
 
 fn main() -> Result<()> {
     // 设置主线程名称（使用pthread_setname_np）
+    // SAFETY: `name` 是从有效的 UTF-8 字符串常量创建的 CString，不含空字节。
+    // `pthread_self()` 返回当前线程的有效句柄。`pthread_setname_np` 仅写入
+    // 线程名称的有限缓冲区，不会导致内存安全问题。
     unsafe {
-        let name = std::ffi::CString::new(MAIN_THREAD).unwrap();
+        let name =
+            std::ffi::CString::new(MAIN_THREAD).expect("thread name should not contain null bytes");
         let result = libc::pthread_setname_np(libc::pthread_self(), name.as_ptr());
         if result != 0 {
             eprintln!("Warning: Failed to set main thread name: {result}");
@@ -215,21 +219,25 @@ fn main() -> Result<()> {
     // 初始化GPU配置
     initialize_gpu_config(&mut gpu)?;
 
+    // 初始化频率和电压（在启动监控线程前完成，确保状态一致）
+    if !gpu.get_config_list().is_empty() {
+        gpu.set_cur_freq(gpu.get_freq_by_index(0));
+        gpu.frequency_mut().gen_cur_volt();
+    } else {
+        warn!("No frequency configuration available, using default settings");
+    }
+
     // 启动监控线程
     let (tx, rx) = std::sync::mpsc::channel::<ConfigDelta>();
     start_monitoring_threads(gpu.clone(), tx);
 
-    // 发送一次初始配置增量（非必须，保证与初始化加载一致）
+    // 发送一次初始配置增量（保证与初始化加载一致）
     if let Ok(delta) = read_config_delta(None) {
         gpu.apply_config_delta(&delta);
     }
 
     // 等待线程启动
     thread::sleep(Duration::from_secs(5));
-
-    // 初始化频率和电压
-    gpu.set_cur_freq(gpu.get_freq_by_index(0));
-    gpu.frequency_mut().gen_cur_volt();
 
     // 显示系统信息
     display_system_info(&gpu);

@@ -1,6 +1,7 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader},
+    sync::atomic::{AtomicI64, Ordering},
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -200,10 +201,10 @@ fn debug_dvfs_load_func() -> Result<i32> {
         return gpufreq_load();
     }
 
-    // Static variables to keep track of previous values
-    static mut PREV_BUSY: i64 = 0;
-    static mut PREV_IDLE: i64 = 0;
-    static mut PREV_PROTM: i64 = 0;
+    // Static variables to keep track of previous values (thread-safe via AtomicI64)
+    static PREV_BUSY: AtomicI64 = AtomicI64::new(0);
+    static PREV_IDLE: AtomicI64 = AtomicI64::new(0);
+    static PREV_PROTM: AtomicI64 = AtomicI64::new(0);
 
     // Parse the second line which contains the values
     let parts: Vec<&str> = lines[1].split_whitespace().collect();
@@ -215,8 +216,10 @@ fn debug_dvfs_load_func() -> Result<i32> {
             parts[2].parse::<i64>(),
         )
     {
-        // Get previous values safely
-        let (prev_busy, prev_idle, prev_protm) = unsafe { (PREV_BUSY, PREV_IDLE, PREV_PROTM) };
+        // Get previous values
+        let prev_busy = PREV_BUSY.load(Ordering::SeqCst);
+        let prev_idle = PREV_IDLE.load(Ordering::SeqCst);
+        let prev_protm = PREV_PROTM.load(Ordering::SeqCst);
 
         // Calculate differences
         let diff_busy = busy - prev_busy;
@@ -224,11 +227,9 @@ fn debug_dvfs_load_func() -> Result<i32> {
         let diff_protm = protm - prev_protm;
 
         // Update previous values
-        unsafe {
-            PREV_BUSY = busy;
-            PREV_IDLE = idle;
-            PREV_PROTM = protm;
-        }
+        PREV_BUSY.store(busy, Ordering::SeqCst);
+        PREV_IDLE.store(idle, Ordering::SeqCst);
+        PREV_PROTM.store(protm, Ordering::SeqCst);
 
         // Calculate load percentage
         let total = diff_busy + diff_idle + diff_protm;

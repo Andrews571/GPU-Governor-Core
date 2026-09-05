@@ -152,6 +152,9 @@ fn try_path(path: &str) -> Result<()> {
         thread::sleep(Duration::from_micros(WAIT_MOVE_US));
 
         // 设置权限
+        // SAFETY: `c_path` 是从有效的 Rust 字符串创建的 CString，`as_ptr()` 返回
+        // 有效的不以 null 结尾的指针仅在 CString 存活期间有效。`RECREATE_DEFAULT_PERM`
+        // 是标准的 Unix 文件权限值 (0o666)。`libc::chmod` 是成熟的 POSIX 函数。
         if let Ok(c_path) = CString::new(path) {
             unsafe {
                 libc::chmod(c_path.as_ptr(), RECREATE_DEFAULT_PERM);

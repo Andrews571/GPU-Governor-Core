@@ -201,8 +201,8 @@ impl GPU {
         self.gpuv2 = gpuv2;
     }
 
-    pub fn get_v2_supported_freqs(&self) -> Vec<i64> {
-        self.v2_supported_freqs.clone()
+    pub fn get_v2_supported_freqs(&self) -> &[i64] {
+        &self.v2_supported_freqs
     }
 
     pub fn set_v2_supported_freqs(&mut self, freqs: Vec<i64>) {
@@ -230,7 +230,7 @@ impl GPU {
         self.frequency_manager.get_middle_freq()
     }
 
-    pub fn get_config_list(&self) -> Vec<i64> {
+    pub fn get_config_list(&self) -> &[i64] {
         self.frequency_manager.get_config_list()
     }
 
@@ -245,7 +245,7 @@ impl GPU {
 
     // 最常用的策略操作
     pub fn get_margin(&self) -> i64 {
-        self.frequency_strategy.get_margin() as i64
+        self.frequency_strategy.get_margin()
     }
 
     // 最常用的DDR操作
@@ -358,7 +358,7 @@ impl GPU {
     }
 
     pub fn apply_config_delta(&mut self, delta: &crate::datasource::config_parser::ConfigDelta) {
-        self.frequency_strategy.set_margin(delta.margin as u32);
+        self.frequency_strategy.set_margin(delta.margin);
         self.frequency_strategy
             .set_aggressive_down(delta.aggressive_down);
         if delta.adaptive_sampling {

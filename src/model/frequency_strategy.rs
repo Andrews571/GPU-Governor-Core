@@ -6,7 +6,7 @@ pub struct FrequencyStrategy {
     /// 降频防抖时间
     pub down_debounce_time: u64, // 降频防抖时间（毫秒）
     /// 调整余量
-    pub margin: u32, // 频率调整余量（MHz）
+    pub margin: i64, // 频率调整余量（MHz）
     /// 激进降频开关
     pub aggressive_down: bool, // 是否启用激进降频
     /// 采样间隔
@@ -28,7 +28,7 @@ impl FrequencyStrategy {
     }
 
     /// 设置频率调整余量
-    pub fn set_margin(&mut self, margin: u32) {
+    pub fn set_margin(&mut self, margin: i64) {
         self.margin = margin;
     }
 
@@ -48,7 +48,7 @@ impl FrequencyStrategy {
     }
 
     /// 获取余量
-    pub fn get_margin(&self) -> u32 {
+    pub fn get_margin(&self) -> i64 {
         self.margin
     }
 

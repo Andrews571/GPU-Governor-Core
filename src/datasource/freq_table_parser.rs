@@ -151,7 +151,7 @@ pub fn freq_table_read(config_file: &str, gpu: &mut GPU) -> Result<()> {
 
     info!("Load frequency table config succeed");
 
-    for &freq in &gpu.get_config_list() {
+    for &freq in gpu.get_config_list() {
         let volt = gpu.read_tab(TabType::FreqVolt, freq);
         let dram = gpu.read_tab(TabType::FreqDram, freq);
         info!("Freq={freq}, Volt={volt}, Dram={dram}");

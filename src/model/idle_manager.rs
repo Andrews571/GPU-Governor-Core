@@ -2,7 +2,7 @@
 #[derive(Clone)]
 pub struct IdleManager {
     /// 是否空闲
-    pub is_idle: bool,
+    is_idle: bool,
     /// 空闲阈值
     pub idle_threshold: i32,
 }
@@ -18,6 +18,11 @@ impl IdleManager {
     /// 设置空闲阈值
     pub fn set_idle_threshold(&mut self, threshold: i32) {
         self.idle_threshold = threshold;
+    }
+
+    /// 更新空闲状态
+    pub fn set_idle(&mut self, is_idle: bool) {
+        self.is_idle = is_idle;
     }
 
     /// 是否空闲
