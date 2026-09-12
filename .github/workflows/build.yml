@@ -25,8 +25,9 @@ jobs:
           submodules: recursive
       - name: Setup ndk
         run: |
-          ndk_url=$(wget -qO- https://github.com/android/ndk/releases/latest | grep -e 'https://dl.google.com/android/repository/android-ndk-.*-linux.zip' | sed -n 's/.*<a href="\([^"]*\)".*/\1/p')
-          wget -O ndk.zip $ndk_url -nv
+          # 固定 NDK 版本，不用 latest：latest 是浮动依赖（NDK r30 于 2026-09-08 发布后，
+          # 其 sysroot/libc++ 头与 runner 的 libclang 组合会破坏 bindgen 的内置头解析）
+          wget -O ndk.zip https://dl.google.com/android/repository/android-ndk-r29-linux.zip -nv
           mkdir -p ~/ndk_temp
           unzip ndk.zip -d ~/ndk_temp 2>&1 > /dev/null
           mv ~/ndk_temp/*/* ~/ndk_temp
@@ -43,20 +44,30 @@ jobs:
             cargo-${{ runner.os }}-
       - name: Setup Rust toolchains
         run: |
-          rustup default nightly
+          rustup default stable
           rustup target add aarch64-linux-android
-          rustup component add rust-src
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-multilib
-          cargo install cargo-ndk --locked
+          sudo apt install -y gcc-multilib libclang-dev
       - name: Build
         run: |
           export ANDROID_NDK_HOME=~/ndk_temp
           export ANDROID_NDK_ROOT=~/ndk_temp
+          NDK_PREBUILT=~/ndk_temp/toolchains/llvm/prebuilt/linux-x86_64
+          # 与本地 build.py 相同的构建方式，不经过 cargo-ndk：
+          # cargo-ndk 会注入 --sysroot 并覆盖 BINDGEN_EXTRA_CLANG_ARGS，
+          # 与 runner 的 libclang 组合会让 bindgen 找不到内置头（stdbool.h 等），
+          # 导致 binder_ndk_sys 的 build.rs panic（exit 101）
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_PREBUILT/bin/aarch64-linux-android33-clang
+          # libclang 必须使用"库与内置头目录相邻"的安装（llvm-* 目录布局），
+          # 否则 bindgen 解析头文件时报 stdbool.h/stddef.h not found
+          LIBCLANG_SO=$(find /usr/lib -maxdepth 4 -name 'libclang.so*' -path '*llvm*' 2>/dev/null | head -n1)
+          [ -z "$LIBCLANG_SO" ] && LIBCLANG_SO=$(find /usr/lib -maxdepth 4 -name 'libclang.so*' 2>/dev/null | head -n1)
+          export LIBCLANG_PATH=$(dirname "$LIBCLANG_SO")
+          export BINDGEN_EXTRA_CLANG_ARGS="--target=aarch64-linux-android -I$NDK_PREBUILT/sysroot/usr/include -isystem $(echo $NDK_PREBUILT/lib/clang/*/include)"
           # 构建发布版本
-          cargo ndk -t arm64-v8a build -r
+          cargo build --release --target aarch64-linux-android
           # 准备模块包
           cp target/aarch64-linux-android/release/gpugovernor module/bin/
           rm -rf module/.git
