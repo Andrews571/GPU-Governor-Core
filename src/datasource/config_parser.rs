@@ -7,7 +7,10 @@ use serde::Deserialize;
 use crate::{
     datasource::file_path::{CONFIG_TOML_FILE, CURRENT_MODE_PATH},
     model::gpu::GPU,
-    utils::file_operate::write_file,
+    utils::{
+        file_operate::write_file,
+        lenient_int::{de_i32_lenient, de_i64_lenient, de_u64_lenient},
+    },
 };
 
 #[derive(Deserialize, Clone)]
@@ -25,22 +28,36 @@ impl Config {
     }
 }
 
+/// 全局配置。
+///
+/// 数值字段使用宽松整数反序列化，以兼容被写成浮点（如 `5.0`）的历史配置文件。
 #[derive(Deserialize, Clone)]
 pub struct Global {
     mode: String,
+    #[serde(deserialize_with = "de_i32_lenient")]
     idle_threshold: i32,
 }
 
+/// 单个模式的调频参数。
+///
+/// 数值字段使用宽松整数反序列化，以兼容被写成浮点（如 `0.0`）的历史配置文件，
+/// 详见 [`crate::utils::lenient_int`]。
 #[derive(Deserialize, Clone)]
 pub struct ModeParams {
+    #[serde(deserialize_with = "de_i64_lenient")]
     margin: i64,
     aggressive_down: bool,
+    #[serde(deserialize_with = "de_u64_lenient")]
     sampling_interval: u64,
     gaming_mode: bool,
     adaptive_sampling: bool,
+    #[serde(deserialize_with = "de_u64_lenient")]
     min_adaptive_interval: u64,
+    #[serde(deserialize_with = "de_u64_lenient")]
     max_adaptive_interval: u64,
+    #[serde(deserialize_with = "de_u64_lenient")]
     up_rate_delay: u64,
+    #[serde(deserialize_with = "de_u64_lenient")]
     down_rate_delay: u64,
 }
 

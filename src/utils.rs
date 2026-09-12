@@ -3,6 +3,7 @@ pub mod file_helper;
 pub mod file_operate;
 pub mod file_status;
 pub mod inotify;
+pub mod lenient_int;
 pub mod log_level_manager;
 pub mod log_rotation;
 pub mod logger;
