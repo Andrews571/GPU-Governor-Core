@@ -134,7 +134,7 @@ impl FrequencyAdjustmentEngine {
         debug!("Executing frequency adjustment for load: {load}%");
 
         let current_freq = gpu.get_cur_freq();
-        let margin = gpu.frequency_strategy.margin;
+        let margin = crate::model::thermal_manager::apply_thermal_derate(gpu.frequency_strategy.margin);
 
         // 使用新的连续调频公式：targetFreq = now_freq * (util + margin) / 100
         // 其中util是负载百分比，margin是调整余量
