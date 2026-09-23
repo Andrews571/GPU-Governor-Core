@@ -4,3 +4,4 @@ pub mod frequency_manager;
 pub mod frequency_strategy;
 pub mod gpu;
 pub mod idle_manager;
+pub mod thermal_manager;
