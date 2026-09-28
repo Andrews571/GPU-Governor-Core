@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod adaptive_sampling_tests;
 pub mod ddr_manager;
 pub mod frequency_engine;
 pub mod frequency_manager;
