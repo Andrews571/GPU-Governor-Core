@@ -1,5 +1,6 @@
 name: ci-build
 'on':
+  workflow_dispatch: {}
   push:
     paths:
       # Rust源代码
@@ -91,12 +92,18 @@ jobs:
           # 创建 zip 文件
           cd temp_package/
           zip -r ../Mediatek_Mali_GPU_Governor.zip .
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mediatek_Mali_GPU_Governor
+          path: Mediatek_Mali_GPU_Governor.zip
       - name: Prepare Upload Info
         id: prep
         run: |
           echo "CARGO_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
           echo "SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
       - name: Upload
+        continue-on-error: true
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
