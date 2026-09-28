@@ -42,8 +42,10 @@ impl FrequencyAdjustmentEngine {
             // 处理负载
             Self::process_load(gpu, load, current_time)?;
 
-            // 应用采样睡眠
-            Self::apply_sampling_sleep(gpu);
+            // 应用采样睡眠（空闲时handle_idle_state已经睡眠过，避免重复睡眠）
+            if !gpu.is_idle() {
+                Self::apply_sampling_sleep(gpu);
+            }
         }
     }
 
@@ -134,7 +136,8 @@ impl FrequencyAdjustmentEngine {
         debug!("Executing frequency adjustment for load: {load}%");
 
         let current_freq = gpu.get_cur_freq();
-        let margin = crate::model::thermal_manager::apply_thermal_derate(gpu.frequency_strategy.margin);
+        let margin =
+            crate::model::thermal_manager::apply_thermal_derate(gpu.frequency_strategy.margin);
 
         // 使用新的连续调频公式：targetFreq = now_freq * (util + margin) / 100
         // 其中util是负载百分比，margin是调整余量
