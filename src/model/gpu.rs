@@ -275,6 +275,15 @@ impl GPU {
         fixed_interval: u64,
     ) {
         if enabled {
+            // 配置中 min > max 会导致后续 clamp panic，这里自动交换并告警
+            let (min_interval, max_interval) = if min_interval <= max_interval {
+                (min_interval, max_interval)
+            } else {
+                warn!(
+                    "min_adaptive_interval ({min_interval}) > max_adaptive_interval ({max_interval}), swapping"
+                );
+                (max_interval, min_interval)
+            };
             // 启用自适应采样，初始设置为最小间隔
             self.frequency_strategy.set_sampling_interval(min_interval);
             self.adaptive_sampling_enabled = true;
@@ -290,11 +299,13 @@ impl GPU {
 
     /// 根据GPU负载动态调整采样间隔
     pub fn adjust_sampling_interval_by_load(&mut self, current_load: i32) {
+        let load_diff = (current_load - self.last_load).abs();
+        // 无论是否启用都记录last_load，避免运行时开启后与过期数据比较
+        self.last_load = current_load;
+
         if !self.adaptive_sampling_enabled {
             return;
         }
-
-        let load_diff = (current_load - self.last_load).abs();
 
         // 根据负载变化调整采样间隔
         let new_interval = if load_diff > 30 {
@@ -315,7 +326,6 @@ impl GPU {
             new_interval.clamp(self.min_adaptive_interval, self.max_adaptive_interval);
 
         self.frequency_strategy.set_sampling_interval(new_interval);
-        self.last_load = current_load;
     }
 
     // 添加缺失的频率管理委托方法
